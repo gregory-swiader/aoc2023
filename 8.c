@@ -2,22 +2,22 @@
 #include <ctype.h>
 #include <stdint.h>
 
-#define ID_LEN      3
-#define ALPH_LEN    26
+#define ID_LEN     3
+#define ALPH_LEN   26
 
-#define ID_OFF      0
-#define LEFT_OFF    7
-#define RIGHT_OFF   12
+#define ID_OFF     0
+#define LEFT_OFF   7
+#define RIGHT_OFF  12
 
-#define NR_STARTS_B 6
+#define MAX_CYCLES 8
 
 
 struct cycle_info {
         int64_t count;
         struct {
-                int64_t start, again;
+                int64_t start, len;
                 char    start_label[ID_LEN + 1], end_label[ID_LEN + 1];
-        } cycle[NR_STARTS_B];
+        } cycle[MAX_CYCLES];
 };
 
 struct node {
@@ -80,7 +80,7 @@ static char *walk(char *start, char *end, char *moves, struct result *out) {
 
 static char *detect_cycles(struct cycle_info *out, char *moves) {
         int64_t nr_moves = strlen(moves), cycles_found = 0;
-        char    nodes[NR_STARTS_B][ID_LEN] = {};
+        char    nodes[MAX_CYCLES][ID_LEN] = {};
         int64_t i, iter;
 
         for (i = 0; i < out->count; i++)
@@ -102,7 +102,8 @@ static char *detect_cycles(struct cycle_info *out, char *moves) {
 
                 iter++;
                 for (i = 0; i < out->count; i++) {
-                        /* I don't like this because it assumes that in each
+                        /*
+                         * I don't like this because it assumes that in each
                          * chain, there's exactly one node ending with 'Z'
                          */
                         if (nodes[i][ID_LEN - 1] == 'Z') {
@@ -110,8 +111,8 @@ static char *detect_cycles(struct cycle_info *out, char *moves) {
                                         out->cycle[i].start = iter;
                                         memcpy(out->cycle[i].end_label,
                                                nodes[i], ID_LEN);
-                                } else if (!out->cycle[i].again) {
-                                        out->cycle[i].again =
+                                } else if (!out->cycle[i].len) {
+                                        out->cycle[i].len =
                                                 iter - out->cycle[i].start;
                                         cycles_found++;
                                 }
@@ -121,18 +122,26 @@ static char *detect_cycles(struct cycle_info *out, char *moves) {
         return NULL;
 }
 
-static void print_cycles(struct cycle_info *info) {
+__attribute__((unused)) static void print_cycles(struct cycle_info *info) {
         for (int64_t i = 0; i < info->count; i++)
                 printf("Path %ld: %s -> %s in %ld steps, again in %ld\n", i,
                        info->cycle[i].start_label, info->cycle[i].end_label,
-                       info->cycle[i].start, info->cycle[i].again);
+                       info->cycle[i].start, info->cycle[i].len);
 }
 
 static char *find_intersection(struct cycle_info *info, struct result *out) {
-        int64_t founds[NR_STARTS_B] = {};
+        int64_t lengths[MAX_CYCLES] = {};
+        /*
+         * I was expecting that the distance from start to end would be
+         * different than the length of the cycle.
+         * If that were the case, this function would be a bit more complicated.
+         * Since for each path the distance to the end is the same as the length
+         * of the cycle starting at end, this problem reduces to finding the
+         * least common multiple of the lengths of the cycles.
+         */
         for (size_t i = 0; i < info->count; i++)
-                founds[i] = info->cycle[i].start;
-        out->b = fold_lcm(founds, info->count);
+                lengths[i] = info->cycle[i].len;
+        out->b = fold_lcm(lengths, info->count);
         return NULL;
 }
 
@@ -161,7 +170,7 @@ char *run(FILE *f, struct result *out) {
                 goto error;
         if ((err = detect_cycles(&starts, moves)) != NULL)
                 goto error;
-        print_cycles(&starts);
+        // print_cycles(&starts);
         err = find_intersection(&starts, out);
 
 error:

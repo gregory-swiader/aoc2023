@@ -2,15 +2,10 @@
 
 int32_t main(int32_t argc, char *argv[]) {
         FILE         *f   = stdin;
-        char         *err = NULL;
-        struct result ret = {};
+        const char   *err = NULL;
+        struct result ret = {0};
 
-        if (argc != 2) {
-                err = "Usage: ./<day> <input>";
-                goto error;
-        }
-
-        if ((f = fopen(argv[1], "r")) == NULL) {
+        if (argc == 2 && (f = fopen(argv[1], "r")) == NULL) {
                 err = "fopen";
                 goto error;
         }

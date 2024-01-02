@@ -25,6 +25,6 @@ struct result {
         int64_t a, b;
 };
 
-char *run(FILE *f, struct result *out);
+const char *run(FILE *f, struct result *out);
 
 #endif // AOC_H
